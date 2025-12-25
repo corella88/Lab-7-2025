@@ -29,6 +29,15 @@ public class SimpleGenerator implements Runnable {
                 System.out.printf("Source %.2f %.2f %.4f\n", leftX, rightX, step);
                 
                 task.next();
+                
+                task.notify();
+            }
+            
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
             }
         }
     }

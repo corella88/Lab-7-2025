@@ -5,18 +5,20 @@ import functions.basic.Log;
 
 public class Generator extends Thread {
     private Task task;
-    private Semaphore semaphore;
+    private java.util.concurrent.Semaphore writeSem;
+    private java.util.concurrent.Semaphore readSem;
     
-    public Generator(Task task, Semaphore semaphore) {
+    public Generator(Task task, java.util.concurrent.Semaphore writeSem, java.util.concurrent.Semaphore readSem) {
         this.task = task;
-        this.semaphore = semaphore;
+        this.writeSem = writeSem;
+        this.readSem = readSem;
     }
     
     @Override
     public void run() {
         try {
             while (task.hasNext() && !isInterrupted()) {
-                semaphore.startWrite();
+                writeSem.acquire();
                 
                 double base = 1.0 + Math.random() * 9.0;
                 Function logFunc = new Log(base);
@@ -35,12 +37,13 @@ public class Generator extends Thread {
                 
                 task.next();
                 
-                semaphore.endWrite();
-                
-                Thread.sleep(1);
+                readSem.release(); 
             }
         } catch (InterruptedException e) {
-            return;
+            Thread.currentThread().interrupt();
+            System.out.println("Generator прерван");
         }
+        
+        readSem.release();
     }
 }

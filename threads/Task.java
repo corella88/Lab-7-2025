@@ -9,6 +9,8 @@ public class Task {
     private double step;
     private int tasksCount;
     private int currentTask;
+    private boolean dataReady = false;
+    private boolean allDone = false;
     
     public Task(int tasksCount) {
         if (tasksCount < 1) {
@@ -16,6 +18,8 @@ public class Task {
         }
         this.tasksCount = tasksCount;
         this.currentTask = 0;
+        this.dataReady = false;
+        this.allDone = false;
     }
     
     public synchronized void setFunction(Function function) {
@@ -60,9 +64,29 @@ public class Task {
     
     public synchronized void next() {
         currentTask++;
+        if (currentTask >= tasksCount) {
+            allDone = true;
+            notifyAll();
+        }
     }
     
     public synchronized int getCurrentTask() {
         return currentTask;
+    }
+    
+    public synchronized void markDataReady() {
+        dataReady = true;
+        notifyAll();
+    }
+    
+    public synchronized void waitForData() throws InterruptedException {
+        while (!dataReady && hasNext()) {
+            wait();
+        }
+        dataReady = false;
+    }
+    
+    public synchronized boolean isAllDone() {
+        return allDone;
     }
 }

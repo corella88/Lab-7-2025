@@ -56,13 +56,11 @@ public class FunctionPoint implements Serializable, Externalizable, Cloneable {
         y = in.readDouble();
     }
     
-
     @Override
     public String toString() {
         return "(" + x + "; " + y + ")";
     }
     
-
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
@@ -70,12 +68,10 @@ public class FunctionPoint implements Serializable, Externalizable, Cloneable {
         
         FunctionPoint other = (FunctionPoint) obj;
         
-        // Сравнение с учетом погрешности
         return Math.abs(x - other.x) < EPSILON && 
                Math.abs(y - other.y) < EPSILON;
     }
     
-
     @Override
     public int hashCode() {
         long xBits = Double.doubleToLongBits(x);
@@ -87,13 +83,11 @@ public class FunctionPoint implements Serializable, Externalizable, Cloneable {
         return xHash ^ yHash;
     }
     
-
     @Override
     public FunctionPoint clone() {
         try {
             return (FunctionPoint) super.clone();
         } catch (CloneNotSupportedException e) {
-            // Это не должно происходить, так как класс реализует Cloneable
             throw new AssertionError("Клонирование не поддерживается", e);
         }
     }

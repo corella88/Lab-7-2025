@@ -6,6 +6,7 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.io.Serializable;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 public class ArrayTabulatedFunction implements TabulatedFunction, Serializable, Externalizable {
     private FunctionPoint[] points;
@@ -15,9 +16,25 @@ public class ArrayTabulatedFunction implements TabulatedFunction, Serializable, 
     
     private static final long serialVersionUID = 1L;
 
-    // Конструктор без параметров ДЛЯ EXTERNALIZABLE
+    // Фабрика для ArrayTabulatedFunction
+    public static class ArrayTabulatedFunctionFactory implements TabulatedFunctionFactory {
+        @Override
+        public TabulatedFunction createTabulatedFunction(double leftX, double rightX, int pointsCount) {
+            return new ArrayTabulatedFunction(leftX, rightX, pointsCount);
+        }
+        
+        @Override
+        public TabulatedFunction createTabulatedFunction(double leftX, double rightX, double[] values) {
+            return new ArrayTabulatedFunction(leftX, rightX, values);
+        }
+        
+        @Override
+        public TabulatedFunction createTabulatedFunction(FunctionPoint[] points) {
+            return new ArrayTabulatedFunction(points);
+        }
+    }
+
     public ArrayTabulatedFunction() {
-        // Инициализация пустой функции
         this.pointsCount = 0;
         this.points = new FunctionPoint[10];
     }
@@ -59,7 +76,6 @@ public class ArrayTabulatedFunction implements TabulatedFunction, Serializable, 
             throw new IllegalArgumentException("Количество точек должно быть не менее 2");
         }
         
-        
         this.pointsCount = values.length;
         this.points = new FunctionPoint[pointsCount + 10];
 
@@ -72,12 +88,10 @@ public class ArrayTabulatedFunction implements TabulatedFunction, Serializable, 
     }
 
     public ArrayTabulatedFunction(FunctionPoint[] points) {
-        // Проверка количества точек
         if (points.length < 2) {
             throw new IllegalArgumentException("Количество точек должно быть не менее 2");
         }
         
-        // Проверка упорядоченности по X
         for (int i = 1; i < points.length; i++) {
             if (points[i].getX() <= points[i - 1].getX()) {
                 throw new IllegalArgumentException("Точки должны быть строго упорядочены по возрастанию X");
@@ -85,9 +99,8 @@ public class ArrayTabulatedFunction implements TabulatedFunction, Serializable, 
         }
         
         this.pointsCount = points.length;
-        this.points = new FunctionPoint[pointsCount + 10]; // +10 для запаса
+        this.points = new FunctionPoint[pointsCount + 10];
         
-        // Копируем точки с созданием новых объектов (инкапсуляция)
         for (int i = 0; i < pointsCount; i++) {
             this.points[i] = new FunctionPoint(points[i]);
         }
@@ -111,16 +124,13 @@ public class ArrayTabulatedFunction implements TabulatedFunction, Serializable, 
             double x2 = points[i + 1].getX();
 
             if (lessOrEqual(x1, x) && lessOrEqual(x, x2)) {
-                // проверяем точное совпадение с x1
                 if (equals(x, x1)) {
                     return points[i].getY();
                 }
-                // проверяем точное совпадение с x2
                 if (equals(x, x2)) {
                     return points[i + 1].getY();
                 }
 
-                // линейная интерполяция
                 double y1 = points[i].getY();
                 double y2 = points[i + 1].getY();
                 return y1 + (y2 - y1) * (x - x1) / (x2 - x1);
@@ -147,7 +157,6 @@ public class ArrayTabulatedFunction implements TabulatedFunction, Serializable, 
             throw new FunctionPointIndexOutOfBoundsException("Индекс " + index + " вне границ [0, " + (pointsCount - 1) + "]");
         }
 
-        // Проверка порядка точек
         if (index > 0 && lessOrEqual(point.getX(), points[index - 1].getX())) {
             throw new InappropriateFunctionPointException("X координата должна быть больше предыдущей точки");
         }
@@ -172,7 +181,6 @@ public class ArrayTabulatedFunction implements TabulatedFunction, Serializable, 
             throw new FunctionPointIndexOutOfBoundsException("Индекс " + index + " вне границ [0, " + (pointsCount - 1) + "]");
         }
 
-        // Проверка порядка точек
         if (index > 0 && lessOrEqual(x, points[index - 1].getX())) {
             throw new InappropriateFunctionPointException("X координата должна быть больше предыдущей точки");
         }
@@ -181,7 +189,6 @@ public class ArrayTabulatedFunction implements TabulatedFunction, Serializable, 
             throw new InappropriateFunctionPointException("X координата должна быть меньше следующей точки");
         }
 
-        // безопасно заменяем
         double oldY = points[index].getY();
         points[index] = new FunctionPoint(x, oldY);
     }
@@ -221,7 +228,6 @@ public class ArrayTabulatedFunction implements TabulatedFunction, Serializable, 
     }
 
     public void addPoint(FunctionPoint point) throws InappropriateFunctionPointException {
-        // Проверка на дублирование X
         for (int i = 0; i < pointsCount; i++) {
             if (equals(points[i].getX(), point.getX())) {
                 throw new InappropriateFunctionPointException("Точка с X=" + point.getX() + " уже существует");
@@ -230,12 +236,12 @@ public class ArrayTabulatedFunction implements TabulatedFunction, Serializable, 
 
         FunctionPoint newPoint = new FunctionPoint(point);
 
-        int insertIndex = 0; // поиск индекса куда вставить точку
+        int insertIndex = 0;
         while (insertIndex < pointsCount && lessOrEqual(points[insertIndex].getX(), newPoint.getX())) {
             insertIndex++;
         }
 
-        if (pointsCount == points.length) { // если не хватает места
+        if (pointsCount == points.length) {
             int newCapacity = points.length + 10;
             FunctionPoint[] newArray = new FunctionPoint[newCapacity];
             for (int i = 0; i < pointsCount; i++) {
@@ -244,7 +250,6 @@ public class ArrayTabulatedFunction implements TabulatedFunction, Serializable, 
             points = newArray;
         }
         
-        // сдвиг точек право (для освобождения места)
         if (pointsCount - insertIndex > 0) {
             for (int i = pointsCount; i > insertIndex; i--) {
                 points[i] = points[i - 1];
@@ -255,7 +260,32 @@ public class ArrayTabulatedFunction implements TabulatedFunction, Serializable, 
         pointsCount++;
     }
 
-    // Externalizable методы
+    // Итератор
+    @Override
+    public Iterator<FunctionPoint> iterator() {
+        return new Iterator<FunctionPoint>() {
+            private int currentIndex = 0;
+            
+            @Override
+            public boolean hasNext() {
+                return currentIndex < pointsCount;
+            }
+            
+            @Override
+            public FunctionPoint next() {
+                if (!hasNext()) {
+                    throw new NoSuchElementException("Нет следующего элемента");
+                }
+                return new FunctionPoint(points[currentIndex++]);
+            }
+            
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException("Удаление не поддерживается");
+            }
+        };
+    }
+
     @Override
     public void writeExternal(ObjectOutput out) throws IOException {
         out.writeInt(pointsCount);
@@ -276,9 +306,6 @@ public class ArrayTabulatedFunction implements TabulatedFunction, Serializable, 
         }
     }
     
-    // ============= ЗАДАНИЕ 2: Переопределение методов Object =============
-    
-
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -295,7 +322,6 @@ public class ArrayTabulatedFunction implements TabulatedFunction, Serializable, 
         return sb.toString();
     }
     
-
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
@@ -308,18 +334,15 @@ public class ArrayTabulatedFunction implements TabulatedFunction, Serializable, 
                 return false;
             }
             
-            // Оптимизация для сравнения с другим ArrayTabulatedFunction
             if (obj instanceof ArrayTabulatedFunction) {
                 ArrayTabulatedFunction otherArray = (ArrayTabulatedFunction) obj;
                 
-                // Быстрое сравнение массивов
                 for (int i = 0; i < pointsCount; i++) {
                     if (!points[i].equals(otherArray.points[i])) {
                         return false;
                     }
                 }
             } else {
-                // Общий случай для любого TabulatedFunction
                 for (int i = 0; i < pointsCount; i++) {
                     if (!this.getPoint(i).equals(other.getPoint(i))) {
                         return false;
@@ -333,7 +356,6 @@ public class ArrayTabulatedFunction implements TabulatedFunction, Serializable, 
         return false;
     }
     
-
     @Override
     public int hashCode() {
         int hash = pointsCount;
@@ -345,13 +367,11 @@ public class ArrayTabulatedFunction implements TabulatedFunction, Serializable, 
         return hash;
     }
     
-
     @Override
     public ArrayTabulatedFunction clone() {
         try {
             ArrayTabulatedFunction cloned = (ArrayTabulatedFunction) super.clone();
             
-            // Глубокое копирование массива точек
             cloned.points = new FunctionPoint[this.points.length];
             for (int i = 0; i < this.pointsCount; i++) {
                 if (this.points[i] != null) {
@@ -361,50 +381,7 @@ public class ArrayTabulatedFunction implements TabulatedFunction, Serializable, 
             
             return cloned;
         } catch (CloneNotSupportedException e) {
-            // Это не должно происходить, так как класс реализует Cloneable
             throw new AssertionError("Клонирование не поддерживается", e);
-        }
-    }
-
-    @Override
-    public Iterator<FunctionPoint> iterator() {
-        return new Iterator<FunctionPoint>() {
-            private int currentIndex = 0;
-            
-            @Override
-            public boolean hasNext() {
-                return currentIndex < pointsCount;
-            }
-            
-            @Override
-            public FunctionPoint next() {
-                if (!hasNext()) {
-                    throw new java.util.NoSuchElementException("Нет следующего элемента");
-                }
-                return new FunctionPoint(points[currentIndex++]);
-            }
-            
-            @Override
-            public void remove() {
-                throw new UnsupportedOperationException("Удаление не поддерживается");
-            }
-        };
-    }
-
-    public static class ArrayTabulatedFunctionFactory implements TabulatedFunctionFactory {
-        @Override
-        public TabulatedFunction createTabulatedFunction(double leftX, double rightX, int pointsCount) {
-            return new ArrayTabulatedFunction(leftX, rightX, pointsCount);
-        }
-        
-        @Override
-        public TabulatedFunction createTabulatedFunction(double leftX, double rightX, double[] values) {
-            return new ArrayTabulatedFunction(leftX, rightX, values);
-        }
-        
-        @Override
-        public TabulatedFunction createTabulatedFunction(FunctionPoint[] points) {
-            return new ArrayTabulatedFunction(points);
         }
     }
 }

@@ -1,6 +1,6 @@
 package threads;
 
-import functions.Function;  // ← ДОБАВЬ ЭТУ СТРОЧКУ!
+import functions.Function;
 import functions.Functions;
 
 public class SimpleIntegrator implements Runnable {
@@ -14,16 +14,23 @@ public class SimpleIntegrator implements Runnable {
     public void run() {
         int processed = 0;
         
-        while (task.hasNext()) {
+        while (processed < task.getTasksCount()) {
             synchronized (task) {
-                // Получаем данные на момент вызова
-                Function func = task.getFunction();
-                double leftX = task.getLeftX();
-                double rightX = task.getRightX();
-                double step = task.getStep();
+                while (task.getFunction() == null && processed < task.getTasksCount()) {
+                    try {
+                        task.wait(10);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                }
                 
-                // Если функция не null - интегрируем
+                Function func = task.getFunction();
                 if (func != null) {
+                    double leftX = task.getLeftX();
+                    double rightX = task.getRightX();
+                    double step = task.getStep();
+                    
                     try {
                         double result = Functions.integrate(func, leftX, rightX, step);
                         System.out.printf("Result %.2f %.2f %.4f %.6f\n", 
@@ -32,6 +39,8 @@ public class SimpleIntegrator implements Runnable {
                     } catch (Exception e) {
                         System.out.printf("Error: %s\n", e.getMessage());
                     }
+                    
+                    task.setFunction(null);
                 }
             }
         }

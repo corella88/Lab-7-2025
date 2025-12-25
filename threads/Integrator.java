@@ -4,48 +4,58 @@ import functions.Functions;
 
 public class Integrator extends Thread {
     private Task task;
-    private Semaphore semaphore;
+    private java.util.concurrent.Semaphore writeSem;
+    private java.util.concurrent.Semaphore readSem;
     
-    public Integrator(Task task, Semaphore semaphore) {
+    public Integrator(Task task, java.util.concurrent.Semaphore writeSem, java.util.concurrent.Semaphore readSem) {
         this.task = task;
-        this.semaphore = semaphore;
+        this.writeSem = writeSem;
+        this.readSem = readSem;
     }
     
     @Override
     public void run() {
         try {
-            while (task.hasNext() && !isInterrupted()) {
-                semaphore.startRead();
+            int processed = 0;
+            int tasksCount = task.getTasksCount();
+            
+            while (processed < tasksCount && !isInterrupted()) {
+                readSem.acquire();
                 
-                try {
-                    if (task.getFunction() != null) {
-                        double leftX = task.getLeftX();
-                        double rightX = task.getRightX();
-                        double step = task.getStep();
-                        
-                        try {
-                            double result = Functions.integrate(task.getFunction(), leftX, rightX, step);
-                            System.out.printf("Integrator: Result %.2f %.2f %.4f %.6f\n", 
-                                leftX, rightX, step, result);
-                        } catch (Exception e) {
-                            System.out.printf("Integrator error: %s\n", e.getMessage());
-                        }
+
+                if (isInterrupted()) {
+                    break;
+                }
+                
+                if (task.getFunction() != null) {
+                    double leftX = task.getLeftX();
+                    double rightX = task.getRightX();
+                    double step = task.getStep();
+                    
+                    try {
+                        double result = Functions.integrate(task.getFunction(), leftX, rightX, step);
+                        System.out.printf("Integrator: Result %.2f %.2f %.4f %.6f\n", 
+                            leftX, rightX, step, result);
+                        processed++;
+                    } catch (Exception e) {
+                        System.out.printf("Integrator error: %s\n", e.getMessage());
+                        processed++;
                     }
-                } finally {
-                    semaphore.endRead();
+                    
+               
+                    task.setFunction(null);
                 }
                 
-                // Короткая пауза, но с проверкой прерывания
-                try {
-                    Thread.sleep(1);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break; // Выходим из цикла при прерывании
-                }
+                writeSem.release();
             }
+            
+            System.out.printf("Integrator обработал %d заданий\n", processed);
+            
         } catch (InterruptedException e) {
-            Thread.currentThread().interrupt(); // Восстанавливаем флаг прерывания
-            System.out.println("Integrator был прерван");
+            Thread.currentThread().interrupt();
+            System.out.println("Integrator прерван");
+            
+            writeSem.release();
         }
     }
 }

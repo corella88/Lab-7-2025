@@ -1,8 +1,6 @@
 package functions;
 
-import java.util.Iterator;
-
-public interface TabulatedFunction extends Function, Iterable<FunctionPoint> {
+public interface TabulatedFunction extends Function, Iterable<FunctionPoint>, Cloneable {
     int getPointsCount();
     FunctionPoint getPoint(int index);
     void setPoint(int index, FunctionPoint point) throws InappropriateFunctionPointException;
