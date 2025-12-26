@@ -203,4 +203,42 @@ public final class TabulatedFunctions {
         
         return createTabulatedFunction(points);
     }
+
+    public static TabulatedFunction inputTabulatedFunction(InputStream in, Class<? extends TabulatedFunction> clazz) throws IOException {
+        DataInputStream dataIn = new DataInputStream(in);
+        
+        int pointsCount = dataIn.readInt();
+        
+        FunctionPoint[] points = new FunctionPoint[pointsCount];
+        for (int i = 0; i < pointsCount; i++) {
+            double x = dataIn.readDouble();
+            double y = dataIn.readDouble();
+            points[i] = new FunctionPoint(x, y);
+        }
+        
+        return createTabulatedFunction(clazz, points);
+    }
+
+    public static TabulatedFunction readTabulatedFunction(Reader in, Class<? extends TabulatedFunction> clazz) throws IOException {
+        StreamTokenizer tokenizer = new StreamTokenizer(in);
+        
+        tokenizer.nextToken();
+        int pointsCount = (int) tokenizer.nval;
+        
+        FunctionPoint[] points = new FunctionPoint[pointsCount];
+        for (int i = 0; i < pointsCount; i++) {
+            tokenizer.nextToken();
+            double x = tokenizer.nval;
+            tokenizer.nextToken();
+            double y = tokenizer.nval;
+            
+            if (Math.abs(y) < 1e-10) {
+                y = 0.0;
+            }
+            
+            points[i] = new FunctionPoint(x, y);
+        }
+        
+        return createTabulatedFunction(clazz, points);
+    }
 }
